@@ -1,8 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const passport = require('passport');
+const cookieParser = require('cookie-parser');
+const expressSession = require('express-session');
 const LocalStrategy = require('passport-local').Strategy;
-const session = require('express-session');
 const app = express();
 
 // create temporary storage for login data
@@ -26,12 +27,12 @@ function getUserByUsername(username){
   });
 }
 
+app.set('view engine', 'hbs');
 app.use('/static', express.static('static'));
 app.use(bodyParser.json());
-
-// configure user session
-app.use(session({
-  secret: 'any ole random string',
+app.use(cookieParser());
+app.use(require('express-session')({
+  secret: 'some random text',
   resave: false,
   saveUninitialized: false
 }));
@@ -67,19 +68,33 @@ function isLoggedIn(req, res, next){
   if( req.user && req.user.id ){
     next();
   } else {
-    res.status(401).end();
+    res.redirect('/login');
   }
 }
 
+app.get('/', function(req, res){
+  res.render('index', {});
+});
+
+app.get('/login', function(req, res){
+  res.render('login', {});
+})
+
 // route to accept logins
 app.post('/login', passport.authenticate('local', { session: true }), function(req, res) {
-  res.redirect('/profile');
+  res.status(200).end();
 });
 
 // route to display user info
 app.get('/profile', isLoggedIn, function(req, res){
   // send user info. It should strip password at this stage
-  res.json({user:req.user});
+  res.render('profile', {user:req.user});
+});
+
+app.get('/logout', function(req, res){
+  // send user info. It should strip password at this stage
+  req.logout();
+  res.redirect('/');
 });
 
 app.listen(8080, function() { // Set app to listen for requests on port 3000
