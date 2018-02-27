@@ -31,9 +31,23 @@ const storage = {
 
 // helper function to get user by username
 function getUserByUsername(username){
-  return Object.values(storage).find( function(user){
-    return user.username === username;
-  });
+  return db.one('SELECT * FROM customer WHERE username=$1', [username])
+    .then(function(user){
+      return user;
+    })
+    .catch(function(error){
+      return null;
+    });
+}
+
+function getUserById(id){
+  return db.one('SELECT * FROM customer WHERE id=$1', [id])
+    .then(function(user){
+      return user;
+    })
+    .catch(function(error){
+      return null;
+    });
 }
 
 app.set('view engine', 'hbs');
@@ -53,18 +67,21 @@ passport.serializeUser(function(user, done) {
 
 // deserialise user from session
 passport.deserializeUser(function(id, done) {
-  const user = storage[id];
-  done(null, user);
+  getUserById(id).then(function(user){
+    done(null, user);
+  });
 });
 
 // configure passport to use local strategy
 // that is use locally stored credentials
 passport.use(new LocalStrategy(
   function(username, password, done) {
-    const user = getUserByUsername(username);
-    if (!user) return done(null, false);
-    if (user.password != password) return done(null, false);
-    return done(null, user);
+    getUserByUsername(username)
+    .then(function(user){
+      if (!user) return done(null, false);
+      if (user.password != password) return done(null, false);
+      return done(null, user);
+    });
   }
 ));
 
@@ -95,7 +112,7 @@ app.get('/register', function(req, res){
 
 app.post('/register', function(req, res){
   const { username, password } = req.body;
-  db.one(`INSERT INTO customers (username, password)
+  db.one(`INSERT INTO customer (username, password)
           VALUES ($1, $2)
           RETURNING id`,
           [username, password])
