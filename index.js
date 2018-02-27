@@ -6,6 +6,15 @@ const expressSession = require('express-session');
 const LocalStrategy = require('passport-local').Strategy;
 const app = express();
 
+const pgp = require('pg-promise')();
+const db = pgp({
+    host: 'localhost',
+    port: 5432,
+    database: process.env.DATABASE,
+    user: process.env.USERNAME,
+    password: process.env.PASSWORD
+});
+
 // create temporary storage for login data
 const storage = {
   1: {
@@ -79,6 +88,24 @@ app.get('/', function(req, res){
 app.get('/login', function(req, res){
   res.render('login', {});
 })
+
+app.get('/register', function(req, res){
+  res.render('register', {});
+});
+
+app.post('/register', function(req, res){
+  const { username, password } = req.body;
+  db.one(`INSERT INTO customers (username, password)
+          VALUES ($1, $2)
+          RETURNING id`,
+          [username, password])
+    .then(function(result){
+      res.status(201).json({id: result.id});
+    })
+    .catch(function( error ){
+      res.status(500).end();
+    })
+});
 
 // route to accept logins
 app.post('/login', passport.authenticate('local', { session: true }), function(req, res) {
