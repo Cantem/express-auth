@@ -6,25 +6,29 @@ const expressSession = require('express-session');
 const LocalStrategy = require('passport-local').Strategy;
 const app = express();
 
-// create temporary storage for login data
-const storage = {
+// create temporary users for login data
+const users = {
   1: {
     id: 1,
-    username: 'bob',
-    password: 'pass'
+    username: 'dmitri',
+    password: 'supersecret'
   },
   2: {
     id: 2,
-    username: 'top',
-    password: 'secret'
+    username: 'oliver',
+    password: 'evenmoresecret'
   }
 };
 
 // helper function to get user by username
 function getUserByUsername(username){
-  return Object.values(storage).find( function(user){
+  return Object.values(users).find( function(user){
     return user.username === username;
   });
+}
+
+function getUserById(id){
+  return users[id];
 }
 
 app.set('view engine', 'hbs');
@@ -32,7 +36,7 @@ app.use('/static', express.static('static'));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(require('express-session')({
-  secret: 'some random text',
+  secret: 'some random text #^*%!!', // used to generate session ids
   resave: false,
   saveUninitialized: false
 }));
@@ -44,7 +48,7 @@ passport.serializeUser(function(user, done) {
 
 // deserialise user from session
 passport.deserializeUser(function(id, done) {
-  const user = storage[id];
+  const user = getUserById(id);
   done(null, user);
 });
 
@@ -63,7 +67,7 @@ passport.use(new LocalStrategy(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// helper function to check user is logged in
+// middleware function to check user is logged in
 function isLoggedIn(req, res, next){
   if( req.user && req.user.id ){
     next();
@@ -76,6 +80,7 @@ app.get('/', function(req, res){
   res.render('index', {});
 });
 
+// login page
 app.get('/login', function(req, res){
   res.render('login', {});
 })
@@ -85,18 +90,19 @@ app.post('/login', passport.authenticate('local', { session: true }), function(r
   res.status(200).end();
 });
 
-// route to display user info
+// profile page - only accessible to logged in users
 app.get('/profile', isLoggedIn, function(req, res){
   // send user info. It should strip password at this stage
   res.render('profile', {user:req.user});
 });
 
+// route to log out users
 app.get('/logout', function(req, res){
-  // send user info. It should strip password at this stage
+  // log user out and redirect them to home page
   req.logout();
   res.redirect('/');
 });
 
-app.listen(8080, function() { // Set app to listen for requests on port 3000
-  console.log('Listening on port 8080!'); // Output message to indicate server is listening
+app.listen(8080, function() {
+  console.log('Listening on port 8080!');
 });

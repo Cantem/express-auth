@@ -14,10 +14,10 @@ myForm.addEventListener('submit', function(event){
     }
   })
   .then(function(response){
-    if(response.status === 401){
-      alert('invalid user name or password');
-    } else {
+    if(response.status === 200){
       window.location.pathname = '/profile';
+    } else {
+      alert('invalid user name or password');
     }
   })
 });
